@@ -5,10 +5,14 @@ import requests
 from lxml import etree
 import pygsheets
 
-gc = pygsheets.authorize(service_file = '../configs/MyLibrary_creds.json')
-sh = gc.open_by_key('1XThz9NPytkAqDzI1Cr8_-zdEGC4YCrOZO4r1UdOPDCc')
+config_parser = cp.ConfigParser()
+config_parser.read('../configs/secret.config')
+sheet_id = config_parser.get('DEFAULT', 'gsheet_id')
 
-sheets = ['test1 full', 'test2 full']
+gc = pygsheets.authorize(service_file = '../configs/MyLibrary_creds.json')
+sh = gc.open_by_key(sheet_id)
+
+sheets = ['Zuo collection full', 'van de Ven collection full']
 dfs = []
 
 for ind, sheet_name in enumerate(sheets):

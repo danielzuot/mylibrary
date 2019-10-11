@@ -5,15 +5,22 @@ import requests
 from lxml import etree
 import pygsheets
 
-gc = pygsheets.authorize(service_file = '../configs/MyLibrary_creds.json')
-sh = gc.open_by_key('1XThz9NPytkAqDzI1Cr8_-zdEGC4YCrOZO4r1UdOPDCc')
-
 config_parser = cp.ConfigParser()
 config_parser.read('../configs/secret.config')
 gr_key = config_parser.get('DEFAULT', 'key')
-sheets = ['test1','test2']
+sheet_id = config_parser.get('DEFAULT', 'gsheet_id')
 
-# Given partial row, returns (book_id, ratings_count, reviews_count, pub_year, avg_rating)
+gc = pygsheets.authorize(service_file = '../configs/MyLibrary_creds.json')
+sh = gc.open_by_key(sheet_id)
+
+# sheets = ['Zuo collection','van de Ven collection']
+sheets = ['test']
+
+def find_best_book_match(results):
+    # TODO: be smarter about finding better match
+    return results[0]
+
+
 def get_book_info(row):
     query = "{} {} {}".format(row['Title'], row['Author First'], row['Author Last'])
     response = requests.get(
@@ -27,9 +34,9 @@ def get_book_info(row):
         # couldn't find any goodreads results, leaving empty
         return row
     results = root[1][6]
-    work_node = results[0]
+    work_node = find_best_book_match(results)
     if work_node[0].text is not None:
-        row['gr_book_id'] = int(work_node[0].text)
+        row['gr_work_id'] = int(work_node[0].text)
     if work_node[2].text is not None:
         row['ratings_count'] = int(work_node[2].text)
     if work_node[3].text is not None:
@@ -38,12 +45,42 @@ def get_book_info(row):
         row['pub_year'] = int(work_node[4].text)
     if work_node[7].text is not None:
         row['avg_rating'] = float(work_node[7].text)
+    if work_node[8][0].text is not None:
+        row['gr_book_id'] = work_node[8][0].text
     return row
+
+
+def get_book_shelves(row):
+    genreExceptions = {
+        'to-read', 'currently-reading', 'owned', 'default', 'favorites', 'books-i-own',
+        'ebook', 'kindle', 'library', 'audiobook', 'owned-books', 'audiobooks', 'my-books',
+        'ebooks', 'to-buy', 'english', 'calibre', 'books', 'british', 'audio', 'my-library',
+        'favourites', 're-read', 'general', 'e-books'
+    }
+    response = requests.get(
+        'https://www.goodreads.com/book/show/{}'.format(row['gr_book_id']),
+        params = {'key':gr_key, 'format':'xml'}
+    )
+    root = etree.fromstring(response.content)
+    book = root[1]
+    description = book[16]
+    pop_shelves = book[28]
+    shelves = []
+    for shelf in pop_shelves:
+        if shelf.get('name') not in genreExceptions:
+            shelves.append(shelf.get('name'))
+    row['genres'] = ", ".join(shelves)
+    if description.text is not None:
+        row['description'] = description.text
+    return row
+
 
 for ind, sheet_name in enumerate(sheets):
     input_sheet = sh.worksheet_by_title(sheet_name)
     df = input_sheet.get_as_df(has_header=True)
     df = df.apply(get_book_info, axis=1)
+    df = df.apply(get_book_shelves, axis=1)
+    print(df)
     output_name = '{} full'.format(sheet_name)
     found = False
     for wks in sh.worksheets():

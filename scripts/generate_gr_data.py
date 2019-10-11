@@ -14,7 +14,7 @@ gc = pygsheets.authorize(service_file = '../configs/MyLibrary_creds.json')
 sh = gc.open_by_key(sheet_id)
 
 # sheets = ['Zuo collection','van de Ven collection']
-sheets = ['test']
+sheets = ['test','test2']
 
 def find_best_book_match(results):
     # TODO: be smarter about finding better match
@@ -36,17 +36,17 @@ def get_book_info(row):
     results = root[1][6]
     work_node = find_best_book_match(results)
     if work_node[0].text is not None:
-        row['gr_work_id'] = int(work_node[0].text)
+        row['Work ID'] = int(work_node[0].text)
     if work_node[2].text is not None:
-        row['ratings_count'] = int(work_node[2].text)
+        row['Ratings count'] = int(work_node[2].text)
     if work_node[3].text is not None:
-        row['reviews_count'] = int(work_node[3].text)
+        row['Reviews count'] = int(work_node[3].text)
     if work_node[4].text is not None:
-        row['pub_year'] = int(work_node[4].text)
+        row['Pub year'] = int(work_node[4].text)
     if work_node[7].text is not None:
-        row['avg_rating'] = float(work_node[7].text)
+        row['Avg rating'] = float(work_node[7].text)
     if work_node[8][0].text is not None:
-        row['gr_book_id'] = work_node[8][0].text
+        row['Book ID'] = work_node[8][0].text
     return row
 
 
@@ -55,10 +55,10 @@ def get_book_shelves(row):
         'to-read', 'currently-reading', 'owned', 'default', 'favorites', 'books-i-own',
         'ebook', 'kindle', 'library', 'audiobook', 'owned-books', 'audiobooks', 'my-books',
         'ebooks', 'to-buy', 'english', 'calibre', 'books', 'british', 'audio', 'my-library',
-        'favourites', 're-read', 'general', 'e-books'
+        'favourites', 're-read', 'general', 'e-books', 'to-reread', 'audio-books', 'german', 'i-own', 'have', 'to-re-read', 'own-it', 'did-not-finish', 'on-my-shelf', 'wish-list', 'personal_library'
     }
     response = requests.get(
-        'https://www.goodreads.com/book/show/{}'.format(row['gr_book_id']),
+        'https://www.goodreads.com/book/show/{}'.format(row['Book ID']),
         params = {'key':gr_key, 'format':'xml'}
     )
     root = etree.fromstring(response.content)
@@ -69,9 +69,9 @@ def get_book_shelves(row):
     for shelf in pop_shelves:
         if shelf.get('name') not in genreExceptions:
             shelves.append(shelf.get('name'))
-    row['genres'] = ", ".join(shelves)
+    row['Genres'] = ", ".join(shelves)
     if description.text is not None:
-        row['description'] = description.text
+        row['Description'] = description.text
     return row
 
 
@@ -80,7 +80,6 @@ for ind, sheet_name in enumerate(sheets):
     df = input_sheet.get_as_df(has_header=True)
     df = df.apply(get_book_info, axis=1)
     df = df.apply(get_book_shelves, axis=1)
-    print(df)
     output_name = '{} full'.format(sheet_name)
     found = False
     for wks in sh.worksheets():

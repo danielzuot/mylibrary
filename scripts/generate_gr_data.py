@@ -1,20 +1,25 @@
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 import pandas as pd
-import numpy as np
+# import numpy as np
 import configparser as cp
 import requests
 from lxml import etree
 import pygsheets
+from tqdm import tqdm
+from bs4 import BeautifulSoup
 
 config_parser = cp.ConfigParser()
 config_parser.read('../configs/secret.config')
 gr_key = config_parser.get('DEFAULT', 'key')
 sheet_id = config_parser.get('DEFAULT', 'gsheet_id')
+tqdm.pandas()
 
 gc = pygsheets.authorize(service_file = '../configs/MyLibrary_creds.json')
 sh = gc.open_by_key(sheet_id)
 
-# sheets = ['Zuo collection','van de Ven collection']
-sheets = ['test','test2']
+sheets = ['Zuo collection','van de Ven collection']
+# sheets = ['test','test2']
 
 def find_best_book_match(results):
     # TODO: be smarter about finding better match
@@ -55,8 +60,12 @@ def get_book_shelves(row):
         'to-read', 'currently-reading', 'owned', 'default', 'favorites', 'books-i-own',
         'ebook', 'kindle', 'library', 'audiobook', 'owned-books', 'audiobooks', 'my-books',
         'ebooks', 'to-buy', 'english', 'calibre', 'books', 'british', 'audio', 'my-library',
-        'favourites', 're-read', 'general', 'e-books', 'to-reread', 'audio-books', 'german', 'i-own', 'have', 'to-re-read', 'own-it', 'did-not-finish', 'on-my-shelf', 'wish-list', 'personal_library'
+        'favourites', 're-read', 'general', 'e-books', 'to-reread', 'audio-books', 'german',
+        'i-own', 'have', 'to-re-read', 'own-it', 'did-not-finish', 'on-my-shelf', 'wish-list',
+        'personal_library'
     }
+    if pd.isnull(row['Book ID']):
+        return row
     response = requests.get(
         'https://www.goodreads.com/book/show/{}'.format(row['Book ID']),
         params = {'key':gr_key, 'format':'xml'}
@@ -71,15 +80,16 @@ def get_book_shelves(row):
             shelves.append(shelf.get('name'))
     row['Genres'] = ", ".join(shelves)
     if description.text is not None:
-        row['Description'] = description.text
+        sanitized_desc = BeautifulSoup(description.text, features='lxml').get_text()
+        row['Description'] = sanitized_desc
     return row
 
 
 for ind, sheet_name in enumerate(sheets):
     input_sheet = sh.worksheet_by_title(sheet_name)
     df = input_sheet.get_as_df(has_header=True)
-    df = df.apply(get_book_info, axis=1)
-    df = df.apply(get_book_shelves, axis=1)
+    df = df.progress_apply(get_book_info, axis=1)
+    df = df.progress_apply(get_book_shelves, axis=1)
     output_name = '{} full'.format(sheet_name)
     found = False
     for wks in sh.worksheets():
@@ -93,8 +103,3 @@ for ind, sheet_name in enumerate(sheets):
     output_sheet.set_dataframe(df, start = 'A1', nan = '')
     # output_sheet.cell('A1').set_text_format('bold', True)
     # output_sheet.get_values(start = 'A1', end = 'A{}'.format(len(df.columns)),returnas = 'range').apply_format(output_sheet.cell('A1'))
-
-
-
-
-

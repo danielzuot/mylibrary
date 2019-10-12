@@ -12,20 +12,15 @@ sheet_id = config_parser.get('DEFAULT', 'gsheet_id')
 gc = pygsheets.authorize(service_file = '../configs/MyLibrary_creds.json')
 sh = gc.open_by_key(sheet_id)
 
-# sheets = ['Zuo collection full', 'van de Ven collection full']
-sheets = ['test full', 'test2 full']
+sheets = ['Zuo collection full', 'van de Ven collection full']
+# sheets = ['test full', 'test2 full']
 dfs = []
 
 for ind, sheet_name in enumerate(sheets):
     input_sheet = sh.worksheet_by_title(sheet_name)
-    dfs.append(input_sheet.get_as_df(has_header=True))
+    dfs.append(input_sheet.get_as_df(has_header=True, value_render=ValueRenderOption.UNFORMATTED_VALUE))
 output_name = '{} {} intersection'.format(sheets[0], sheets[1])
-found = False
-for wks in sh.worksheets():
-    if wks.title == output_name:
-        found = True
-        break
-if not found:
+if not output_name in [x.title for x in sh.worksheets()]:
     sh.add_worksheet(output_name)
 output_sheet = sh.worksheet_by_title(output_name)
 output_sheet.clear(start = 'A1')

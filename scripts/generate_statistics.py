@@ -1,14 +1,18 @@
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 import pandas as pd
 import numpy as np
 import configparser as cp
 import requests
 from lxml import etree
 import pygsheets
+from tqdm import tqdm
 
 config_parser = cp.ConfigParser()
 config_parser.read('../configs/secret.config')
 gr_key = config_parser.get('DEFAULT', 'key')
 sheet_id = config_parser.get('DEFAULT', 'gsheet_id')
+tqdm.pandas()
 
 gc = pygsheets.authorize(service_file = '../configs/MyLibrary_creds.json')
 sh = gc.open_by_key(sheet_id)

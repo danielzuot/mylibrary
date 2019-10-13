@@ -18,8 +18,8 @@ tqdm.pandas()
 gc = pygsheets.authorize(service_file = '../configs/MyLibrary_creds.json')
 sh = gc.open_by_key(sheet_id)
 
-sheets = ['Zuo collection','van de Ven collection']
-# sheets = ['test','test2']
+# sheets = ['Zuo collection','van de Ven collection']
+sheets = ['test','test2']
 
 def find_best_book_match(results):
     # TODO: be smarter about finding better match

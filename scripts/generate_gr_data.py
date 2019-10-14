@@ -18,8 +18,8 @@ tqdm.pandas()
 gc = pygsheets.authorize(service_file = '../configs/MyLibrary_creds.json')
 sh = gc.open_by_key(sheet_id)
 
-# sheets = ['Zuo collection','van de Ven collection']
-sheets = ['test','test2']
+sheets = ['Zuo collection','van de Ven collection']
+# sheets = ['test','test2']
 
 def find_best_book_match(results):
     # TODO: be smarter about finding better match
@@ -52,6 +52,7 @@ def get_book_info(row):
         row['Avg rating'] = float(work_node[7].text)
     if work_node[8][0].text is not None:
         row['Book ID'] = work_node[8][0].text
+        row['Author ID'] = work_node[8][2][0].text
     return row
 
 
@@ -62,8 +63,9 @@ def get_book_shelves(row):
         'ebooks', 'to-buy', 'english', 'calibre', 'books', 'british', 'audio', 'my-library',
         'favourites', 're-read', 'general', 'e-books', 'to-reread', 'audio-books', 'german',
         'i-own', 'have', 'to-re-read', 'own-it', 'did-not-finish', 'on-my-shelf', 'wish-list',
-        'personal_library'
+        'personal-library', 'e-book', 'dnf', 'abandoned', 'hardcover', 'library-books', 'all-time-favorites', 'stand-alone', 'tbr', 'series', 'paperback', 'all'
     }
+    max_shelves_per_book = 10
     if pd.isnull(row['Book ID']):
         return row
     response = requests.get(
@@ -78,6 +80,8 @@ def get_book_shelves(row):
     for shelf in pop_shelves:
         if shelf.get('name') not in genreExceptions:
             shelves.append(shelf.get('name'))
+        if len(shelves) == max_shelves_per_book:
+            break
     row['Genres'] = ", ".join(shelves)
     if description.text is not None:
         sanitized_desc = BeautifulSoup(description.text, features='lxml').get_text()
@@ -87,7 +91,7 @@ def get_book_shelves(row):
 
 for ind, sheet_name in enumerate(sheets):
     input_sheet = sh.worksheet_by_title(sheet_name)
-    df = input_sheet.get_as_df(has_header=True)
+    df = input_sheet.get_as_df(has_header=True, empty_value = np.nan)
     df = df.progress_apply(get_book_info, axis=1)
     df = df.progress_apply(get_book_shelves, axis=1)
     output_name = '{} full'.format(sheet_name)
@@ -101,5 +105,3 @@ for ind, sheet_name in enumerate(sheets):
     output_sheet = sh.worksheet_by_title(output_name)
     output_sheet.clear(start = 'A1')
     output_sheet.set_dataframe(df, start = 'A1', nan = '')
-    # output_sheet.cell('A1').set_text_format('bold', True)
-    # output_sheet.get_values(start = 'A1', end = 'A{}'.format(len(df.columns)),returnas = 'range').apply_format(output_sheet.cell('A1'))

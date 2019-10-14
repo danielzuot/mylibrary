@@ -39,7 +39,7 @@ def pick_book():
         return
 
     input_sheet = sh.worksheet_by_title(sheet_name)
-    library_df = input_sheet.get_as_df(has_header=True)
+    library_df = input_sheet.get_as_df(has_header=True, empty_value = np.nan)
     filtered_df = library_df.query(query_str)
     print(filtered_df.sample())
 

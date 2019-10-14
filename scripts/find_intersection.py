@@ -12,8 +12,8 @@ sheet_id = config_parser.get('DEFAULT', 'gsheet_id')
 gc = pygsheets.authorize(service_file = '../configs/MyLibrary_creds.json')
 sh = gc.open_by_key(sheet_id)
 
-# sheets = ['Zuo collection full', 'van de Ven collection full']
-sheets = ['test full', 'test2 full']
+sheets = ['Zuo collection full', 'van de Ven collection full']
+# sheets = ['test full', 'test2 full']
 dfs = []
 
 for ind, sheet_name in enumerate(sheets):

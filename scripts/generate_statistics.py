@@ -27,6 +27,8 @@ if not output_name in [x.title for x in sh.worksheets()]:
     sh.add_worksheet(output_name)
 output_sheet = sh.worksheet_by_title(output_name)
 output_sheet.clear(start = 'A1')
+for i in range(10):
+    output_sheet.update_value('A1', i)
 current_row = 1
 for ind, sheet_name in enumerate(sheets):
     input_sheet = sh.worksheet_by_title(sheet_name)
@@ -46,6 +48,12 @@ current_row += 1
 output_sheet.update_value((current_row,1),'Oldest (by pub year)')
 current_row += 1
 output_sheet.update_value((current_row,1),'Newest (by pub year)')
+current_row += 1
+output_sheet.update_value((current_row,1),'Most popular (by rating count')
+current_row += 1
+output_sheet.update_value((current_row,1),'Highest rated')
+current_row += 1
+output_sheet.update_value((current_row,1),'Lowest rated')
 current_row += 1
 output_sheet.update_value((current_row,1),'Total finished by Daniel')
 current_row += 1
@@ -70,20 +78,35 @@ for ind, df in enumerate(dfs):
     output_sheet.update_value((current_row, ind*2 + 2), len(df))
     current_row += 1
 
-    title_length = df['Title'].map(len)
+    title_length = df['Title'].apply(str).map(len)
     output_sheet.update_value((current_row, ind*2 + 2), df.loc[title_length.argmin,'Title'])
     current_row += 1
     output_sheet.update_value((current_row, ind*2 + 2), df.loc[title_length.argmax,'Title'])
     current_row += 1
 
     oldest_year = int(df['Pub year'].min())
-    output_sheet.update_value((current_row, ind*2 + 2), df.loc[df['Pub year'] == oldest_year].iloc[0]['Title'])
+    output_sheet.update_value((current_row, ind*2 + 2), df.loc[df['Pub year'] == oldest_year]['Title'].iloc[0])
     output_sheet.update_value((current_row, ind*2 + 3), oldest_year)
     current_row += 1
 
     newest_year = int(df['Pub year'].max())
-    output_sheet.update_value((current_row, ind*2 + 2), df.loc[df['Pub year'] == newest_year].iloc[0]['Title'])
+    output_sheet.update_value((current_row, ind*2 + 2), df.loc[df['Pub year'] == newest_year]['Title'].iloc[0])
     output_sheet.update_value((current_row, ind*2 + 3), newest_year)
+    current_row += 1
+
+    most_popular = int(df['Ratings count'].max())
+    output_sheet.update_value((current_row, ind*2 + 2), df.loc[df['Ratings count'] == most_popular].iloc[0]['Title'])
+    output_sheet.update_value((current_row, ind*2 + 3), most_popular)
+    current_row += 1
+
+    highest_rated = int(df['Avg rating'].max())
+    output_sheet.update_value((current_row, ind*2 + 2), df.loc[df['Avg rating'] == highest_rated].iloc[0]['Title'])
+    output_sheet.update_value((current_row, ind*2 + 3), highest_rated)
+    current_row += 1
+
+    lowest_rated = int(df['Avg rating'].min())
+    output_sheet.update_value((current_row, ind*2 + 2), df.loc[df['Avg rating'] == lowest_rated].iloc[0]['Title'])
+    output_sheet.update_value((current_row, ind*2 + 3), lowest_rated)
     current_row += 1
 
     daniel_read_freqs = df['Has Daniel read?'].value_counts()
@@ -101,20 +124,20 @@ for ind, df in enumerate(dfs):
     output_sheet.update_value((current_row, ind*2 + 2), int(rebca_read_freqs.at[0.0]))
     current_row += 1
 
-    book_freqs = df['Book ID'].value_counts()[:top_n_dups]
+    book_freqs = df['Book ID'].value_counts().iloc[:top_n_dups]
     for book_id, freq in book_freqs.items():
         output_sheet.update_value((current_row, ind*2 + 2), df.loc[df['Book ID'] == book_id].iloc[0]['Title'])
         output_sheet.update_value((current_row, ind*2 + 3), freq)
         current_row += 1
 
-    author_freqs = df['Author ID'].value_counts()[:top_n_authors]
+    author_freqs = df['Author ID'].value_counts().iloc[:top_n_authors]
     for author_id, freq in author_freqs.items():
         first_author_row = df.loc[df['Author ID'] == author_id].iloc[0]
         output_sheet.update_value((current_row, ind*2 + 2), '{} {}'.format(first_author_row['Author First'], first_author_row['Author Last']))
         output_sheet.update_value((current_row, ind*2 + 3), freq)
         current_row += 1
 
-    all_genres = [x.split(',') for x in df['Genres'].tolist()]
+    all_genres = [x.split(',') for x in df['Genres'].tolist() if pd.notnull(x)]
     all_genres_flat = [item.strip() for sublist in all_genres for item in sublist]
     c = Counter(all_genres_flat)
     for genre, genre_count in c.most_common(top_n_genres):
